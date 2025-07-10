@@ -1,4 +1,4 @@
-#version: '3.8'
+# "version" attribute is removed.
 
 services:
   backend:
@@ -38,6 +38,9 @@ services:
       - /app/node_modules
     environment:
       - NODE_ENV=development
+      # --- THE TWO KEY CHANGES FOR THIS FIX ---
+      - HOST=0.0.0.0
+      - WDS_SOCKET_PORT=0 # Tells WebSocket server not to use a specific port, solving proxy issues
     networks:
       - corpus-net
 
@@ -45,7 +48,7 @@ services:
     build: ./nginx
     container_name: corpus_nginx
     ports:
-      - "80:80"
+      - "8080:80"
       - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
