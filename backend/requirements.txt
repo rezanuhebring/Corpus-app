@@ -7,3 +7,7 @@ elasticsearch[async]
 langdetect
 passlib[bcrypt]
 python-jose[cryptography]
+
+# --- THIS IS THE FIX for the dependency error ---
+# Pin bcrypt to a known compatible version
+bcrypt==4.0.1
