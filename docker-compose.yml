@@ -1,5 +1,3 @@
-# "version" attribute is removed.
-
 services:
   backend:
     build: ./backend
@@ -46,11 +44,8 @@ services:
     environment:
       - NODE_ENV=development
       - HOST=0.0.0.0
-      - WDS_SOCKET_PORT=0
-      # --- THIS IS THE FINAL FIX ---
-      # It tells the React dev server to trust the Nginx proxy and not perform
-      # its own host checks, which prevents the proxy error.
       - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      - WDS_SOCKET_PATH=/ws
     networks:
       - corpus-net
 
