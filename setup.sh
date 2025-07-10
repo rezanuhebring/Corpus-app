@@ -3,16 +3,59 @@ set -e
 
 echo "Welcome to the Corpus App Installer!"
 echo "===================================="
+echo "This script will check for dependencies and set up the application."
 
-# Check for dependencies
-if ! [ -x "$(command -v docker)" ]; then
-  echo >&2 "Error: Docker is not installed. Please install Docker and run this script again."
-  exit 1
+# --- Helper Function to Check for Commands ---
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# --- Docker Installation Logic ---
+install_docker() {
+    echo "Docker not found. Starting installation..."
+    echo "You will be prompted for your password to install packages."
+    
+    # 1. Set up the repository
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl gnupg
+    
+    sudo install -m 0755 -d /etc/apt/keyrings
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+    sudo chmod a+r /etc/apt/keyrings/docker.gpg
+    
+    echo \
+      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+    
+    sudo apt-get update
+    
+    # 2. Install Docker Engine, CLI, Containerd, and Compose plugin
+    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    echo "✅ Docker installation complete."
+    
+    # 3. Add current user to the docker group
+    if ! getent group docker | grep -q "\b$USER\b"; then
+        echo "Adding current user ($USER) to the 'docker' group..."
+        sudo usermod -aG docker $USER
+        echo "--------------------------------------------------------------------"
+        echo "IMPORTANT: You must log out and log back in for the group"
+        echo "           changes to take effect."
+        echo "           After logging back in, please re-run this script."
+        echo "--------------------------------------------------------------------"
+        exit 1
+    fi
+}
+
+# --- Main Script ---
+
+# Check for Docker and Docker Compose
+if ! command_exists docker || ! docker compose version >/dev/null 2>&1; then
+    install_docker
 fi
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo >&2 "Error: docker-compose is not installed. Please install it and run this script again."
-  exit 1
-fi
+
+# If we get here, Docker is installed and the user has permissions.
+echo "✅ Docker and Docker Compose are installed and configured."
 
 # Create environment file if it doesn't exist
 if [ ! -f ".env" ]; then
@@ -58,10 +101,9 @@ do
             sed -i "s/YOUR_DOMAIN_NAME/${DOMAIN}/g" nginx/default.conf
 
             echo "Initializing Let's Encrypt certificate..."
-            # We need to run a temporary Nginx to solve the ACME challenge
-            docker-compose up -d nginx
-            docker-compose run --rm certbot certonly --webroot --webroot-path /var/www/certbot -d ${DOMAIN} --email ${EMAIL} --rsa-key-size 4096 --agree-tos --non-interactive --force-renewal
-            docker-compose down # Stop the temporary Nginx
+            docker compose up -d nginx
+            docker compose run --rm certbot certonly --webroot --webroot-path /var/www/certbot -d ${DOMAIN} --email ${EMAIL} --rsa-key-size 4096 --agree-tos --non-interactive --force-renewal
+            docker compose down
 
             MODE="prod"
             break
@@ -74,8 +116,8 @@ echo
 echo "Setup complete. Building and starting containers..."
 echo "This might take several minutes..."
 
-docker-compose build
-docker-compose up -d
+docker compose build
+docker compose up -d
 
 echo
 echo "✅ Corpus App has been successfully deployed!"
@@ -84,4 +126,4 @@ if [ "$MODE" = "dev" ]; then
 else
     echo "Access the dashboard at: https://${DOMAIN}"
 fi
-echo "You can manage the services using 'docker-compose [up|down|logs]'"
+echo "You can manage the services using 'docker compose [up|down|logs]'"
