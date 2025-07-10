@@ -7,7 +7,9 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # We remove depends_on, as the application-level retry in session.py is more robust
+    depends_on:
+      elasticsearch:
+        condition: service_healthy # Re-added for a robust two-layer check
     networks:
       - corpus-net
 
@@ -15,15 +17,21 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     container_name: corpus_elasticsearch
     environment:
-      - node.name=es01 # Give the node a predictable name
+      - node.name=es01
       - discovery.type=single-node
-      - "cluster.initial_master_nodes=es01" # Use the predictable name to bootstrap the cluster
+      - "cluster.initial_master_nodes=es01"
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
+    healthcheck:
+      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s # Increased start period for slower systems
     networks:
       - corpus-net
 
@@ -52,7 +60,7 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      - backend # Nginx should still wait for the backend service to exist
+      - backend
       - frontend
     networks:
       - corpus-net
@@ -70,10 +78,6 @@ networks:
 
 volumes:
   esdata:
-    driver: local
   corpus_files:
-    driver: local
   certbot_www:
-    driver: local
   certbot_conf:
-    driver: local
