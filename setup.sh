@@ -1,67 +1,94 @@
 #!/bin/bash
+# This script must be run as a non-root user with sudo privileges.
+# It will automatically use 'sudo' when needed for installations.
 set -e
 
 echo "Welcome to the Corpus App Installer!"
 echo "===================================="
-echo "This script will check for dependencies and set up the application."
+echo "This script will check for dependencies, install them if necessary,"
+echo "and set up the application."
+echo
 
 # --- Helper Function to Check for Commands ---
 command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# --- Docker Installation Logic ---
-install_docker() {
-    echo "Docker not found. Starting installation..."
-    echo "You will be prompted for your password to install packages."
-    
-    # 1. Set up the repository
-    sudo apt-get update
-    sudo apt-get install -y ca-certificates curl gnupg
-    
-    sudo install -m 0755 -d /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-    sudo chmod a+r /etc/apt/keyrings/docker.gpg
-    
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
-      $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
-      sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-    
-    sudo apt-get update
-    
-    # 2. Install Docker Engine, CLI, Containerd, and Compose plugin
-    sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    echo "✅ Docker installation complete."
-    
-    # 3. Add current user to the docker group
-    if ! getent group docker | grep -q "\b$USER\b"; then
-        echo "Adding current user ($USER) to the 'docker' group..."
-        sudo usermod -aG docker $USER
+# --- This function handles all Docker-related setup ---
+ensure_docker_is_ready() {
+    # 1. CHECK IF DOCKER COMMAND EXISTS
+    if ! command_exists docker; then
+        echo "Docker command not found. Beginning installation of Docker Engine..."
+        sudo apt-get update
+        sudo apt-get install -y ca-certificates curl gnupg
+        sudo install -m 0755 -d /etc/apt/keyrings
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+        sudo chmod a+r /etc/apt/keyrings/docker.gpg
+        echo \
+          "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+          $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+          sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+        sudo apt-get update
+        sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+        echo "✅ Docker Engine and Compose Plugin installed."
+    else
+        echo "✅ Docker command found."
+    fi
+
+    # 2. ENSURE DOCKER GROUP EXISTS
+    if ! getent group docker > /dev/null; then
+        echo "Docker group not found. Creating it..."
+        sudo groupadd docker
+        echo "✅ Docker group created."
+    fi
+
+    # 3. ENSURE CURRENT USER IS IN THE DOCKER GROUP
+    if ! id -nG "$USER" | grep -qw "docker"; then
+        echo "User '$USER' is not in the 'docker' group. Adding..."
+        sudo usermod -aG docker "$USER"
+        echo
+        echo "----------------------------- CRITICAL -----------------------------"
+        echo "You have been added to the 'docker' group."
+        echo "For this change to take effect, you MUST log out and log back in."
+        echo "The most reliable method is to REBOOT the system:"
+        echo
+        echo "    sudo reboot"
+        echo
+        echo "After rebooting, please re-run this script."
         echo "--------------------------------------------------------------------"
-        echo "IMPORTANT: You must log out and log back in for the group"
-        echo "           changes to take effect."
-        echo "           After logging back in, please re-run this script."
+        exit 1
+    fi
+
+    # 4. FINAL PERMISSION CHECK: Can we actually connect to the Docker socket?
+    if ! docker info >/dev/null 2>&1; then
+        echo
+        echo "----------------------------- CRITICAL ERROR -----------------------------"
+        echo "❌ Cannot connect to the Docker daemon. Your session is 'stale'."
+        echo "Even though you are in the 'docker' group, your current terminal"
+        echo "session does not have the correct permissions yet."
+        echo
+        echo "SOLUTION: Log out and log back in, or reboot the system."
+        echo "          A reboot ('sudo reboot') is the most definitive fix."
+        echo
+        echo "TEMPORARY FIX for this session only: Run 'newgrp docker' and"
+        echo "then re-run this script in the new shell that appears."
         echo "--------------------------------------------------------------------"
         exit 1
     fi
 }
 
-# --- Main Script ---
+# --- Main Script Execution ---
 
-# Check for Docker and Docker Compose
-if ! command_exists docker || ! docker compose version >/dev/null 2>&1; then
-    install_docker
-fi
+# Run the comprehensive Docker check and setup function first.
+ensure_docker_is_ready
 
-# If we get here, Docker is installed and the user has permissions.
-echo "✅ Docker and Docker Compose are installed and configured."
+echo "✅ Docker is installed and permissions are correctly configured."
+echo
 
 # Create environment file if it doesn't exist
 if [ ! -f ".env" ]; then
     echo "Creating .env file from template..."
     cp .env.template .env
-    # Generate a strong secret key for JWT
     echo "Generating a new secret key..."
     SECRET_KEY=$(openssl rand -hex 32)
     sed -i "s/^SECRET_KEY=.*/SECRET_KEY=${SECRET_KEY}/" .env
@@ -92,7 +119,6 @@ do
                 exit 1
             fi
 
-            # Update .env file
             sed -i "s/^CORPUS_DOMAIN=.*/CORPUS_DOMAIN=${DOMAIN}/" .env
             sed -i "s/^CERTBOT_EMAIL=.*/CERTBOT_EMAIL=${EMAIL}/" .env
 
@@ -116,6 +142,7 @@ echo
 echo "Setup complete. Building and starting containers..."
 echo "This might take several minutes..."
 
+# Using modern 'docker compose' syntax
 docker compose build
 docker compose up -d
 
