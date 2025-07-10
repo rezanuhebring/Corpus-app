@@ -9,10 +9,9 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # --- THIS IS THE KEY CHANGE FOR THE RACE CONDITION ---
     depends_on:
       elasticsearch:
-        condition: service_healthy # Wait for the healthcheck to pass
+        condition: service_healthy
     networks:
       - corpus-net
 
@@ -27,13 +26,15 @@ services:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
-    # --- THIS IS THE HEALTHCHECK THAT 'depends_on' WILL USE ---
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s"]
+      # --- THIS IS THE CORRECTED HEALTHCHECK ---
+      # Using CMD-SHELL is more robust and correctly handles the command.
+      # The '|| exit 1' ensures a non-zero exit code on failure.
+      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"
       interval: 10s
       timeout: 10s
       retries: 5
-      start_period: 20s # Give ES time to start before checking
+      start_period: 20s
     networks:
       - corpus-net
 
