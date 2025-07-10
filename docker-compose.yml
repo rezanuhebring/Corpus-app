@@ -17,8 +17,6 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     container_name: corpus_elasticsearch
     environment:
-      # --- THIS IS THE FINAL, SIMPLIFIED, AND CORRECT CONFIGURATION ---
-      # For a single node, this is all that is required.
       - discovery.type=single-node
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
@@ -40,9 +38,13 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: corpus_frontend
+    # --- THIS IS THE FINAL, ROBUST FIX ---
+    # Instead of mounting the whole directory and using the anonymous volume trick,
+    # we explicitly mount only the folders needed for hot-reloading.
+    # This guarantees that the container's own node_modules is used.
     volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - ./frontend/src:/app/src
+      - ./frontend/public:/app/public
     environment:
       - NODE_ENV=development
       - HOST=0.0.0.0
