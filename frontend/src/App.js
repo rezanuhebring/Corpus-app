@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Search from './pages/Search';
 import DocumentView from './pages/DocumentView';
 import LoginPage from './pages/LoginPage';
+import UserManagement from './pages/admin/UserManagement';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -23,8 +24,10 @@ function App() {
   return (
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
-      <AuthProvider>
-        <Router>
+      {/* --- THIS IS THE FIX --- */}
+      {/* <Router> must be the parent of any component that uses router hooks */}
+      <Router>
+        <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route 
@@ -38,10 +41,11 @@ function App() {
               <Route index element={<Dashboard />} />
               <Route path="search" element={<Search />} />
               <Route path="document/:id" element={<DocumentView />} />
+              <Route path="admin/users" element={<UserManagement />} /> 
             </Route>
           </Routes>
-        </Router>
-      </AuthProvider>
+        </AuthProvider>
+      </Router>
     </ThemeProvider>
   );
 }
