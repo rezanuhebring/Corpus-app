@@ -27,9 +27,6 @@ services:
     ports:
       - "9200:9200"
     healthcheck:
-      # --- THIS IS THE CORRECTED HEALTHCHECK ---
-      # Using CMD-SHELL is more robust and correctly handles the command.
-      # The '|| exit 1' ensures a non-zero exit code on failure.
       test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=5s || exit 1"
       interval: 10s
       timeout: 10s
@@ -50,6 +47,10 @@ services:
       - NODE_ENV=development
       - HOST=0.0.0.0
       - WDS_SOCKET_PORT=0
+      # --- THIS IS THE FINAL FIX ---
+      # It tells the React dev server to trust the Nginx proxy and not perform
+      # its own host checks, which prevents the proxy error.
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
     networks:
       - corpus-net
 
