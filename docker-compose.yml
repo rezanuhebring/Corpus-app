@@ -7,7 +7,9 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # We can remove depends_on, as the app-level retry is the most robust method.
+    depends_on:
+      elasticsearch:
+        condition: service_healthy # Wait for ES to be healthy before starting
     networks:
       - corpus-net
 
@@ -18,19 +20,24 @@ services:
       - node.name=es01
       - discovery.type=single-node
       - "cluster.initial_master_nodes=es01"
-      # --- THIS IS THE FINAL, CRITICAL FIX ---
-      # Tells Elasticsearch to listen on all network interfaces inside the container,
-      # making it accessible to the 'backend' service.
-      - network.host=0.0.0.0
+      - network.host=0.0.0.0 # Binds to all network interfaces
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
+    healthcheck:
+      # This test will only pass if the service is truly up and accessible
+      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s # Give ES plenty of time to initialize
     networks:
       - corpus-net
-
+  
+  # Frontend, Nginx, and Certbot services remain the same...
   frontend:
     build:
       context: ./frontend
