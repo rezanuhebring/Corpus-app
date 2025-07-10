@@ -7,9 +7,7 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    depends_on:
-      elasticsearch:
-        condition: service_healthy # Re-added for a robust two-layer check
+    # We can remove depends_on, as the app-level retry is the most robust method.
     networks:
       - corpus-net
 
@@ -20,18 +18,16 @@ services:
       - node.name=es01
       - discovery.type=single-node
       - "cluster.initial_master_nodes=es01"
+      # --- THIS IS THE FINAL, CRITICAL FIX ---
+      # Tells Elasticsearch to listen on all network interfaces inside the container,
+      # making it accessible to the 'backend' service.
+      - network.host=0.0.0.0
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
       - "9200:9200"
-    healthcheck:
-      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s # Increased start period for slower systems
     networks:
       - corpus-net
 
