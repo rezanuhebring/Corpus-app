@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+pydantic[email]
+pydantic-settings
+python-multipart
+elasticsearch[async]
+langdetect
+passlib[bcrypt]
+python-jose[cryptography]
