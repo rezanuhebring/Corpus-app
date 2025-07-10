@@ -17,13 +17,9 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     container_name: corpus_elasticsearch
     environment:
-      - node.name=es01
+      # --- THIS IS THE FINAL, SIMPLIFIED, AND CORRECT CONFIGURATION ---
+      # For a single node, this is all that is required.
       - discovery.type=single-node
-      - "cluster.initial_master_nodes=es01"
-      # --- THIS IS THE FINAL, DEFINITIVE FIX ---
-      # This specific combination is required for development mode in recent ES versions.
-      - network.host=_local_,_site_
-      - http.host=0.0.0.0
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
