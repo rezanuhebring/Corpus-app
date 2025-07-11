@@ -3,8 +3,11 @@ import asyncio
 from elasticsearch import AsyncElasticsearch, ConnectionError as ESConnectionError
 from app.core.config import settings
 
+# --- THIS IS THE FIX ---
+# We build the connection string directly, using the hardcoded port 9200,
+# and no longer try to access the non-existent 'ELASTICSEARCH_PORT' setting.
 es_client = AsyncElasticsearch(
-    f"http://{settings.ELASTICSEARCH_HOST}:{settings.ELASTICSEARCH_PORT}",
+    f"http://{settings.ELASTICSEARCH_HOST}:9200",
     request_timeout=30
 )
 
@@ -24,7 +27,6 @@ async def create_indices():
                 print("✅ Successfully connected to Elasticsearch.")
                 break
             else:
-                # This case is unlikely but good to have
                 print(f"Ping to Elasticsearch failed. Retrying... (Attempt {attempt + 1}/{max_retries})")
                 await asyncio.sleep(retry_delay)
         except ESConnectionError as e:
