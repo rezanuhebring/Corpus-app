@@ -7,36 +7,32 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # --- THIS IS THE ARCHITECTURAL CHANGE ---
+    # This service will share the network namespace of the 'elasticsearch' service.
+    # It will not get its own IP address.
+    network_mode: "service:elasticsearch"
+    # It depends on ES starting, but doesn't need to be on the external network.
     depends_on:
-      elasticsearch:
-        condition: service_healthy
-    networks:
-      - corpus-net
+      - elasticsearch
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     container_name: corpus_elasticsearch
     environment:
       - discovery.type=single-node
-      # --- THIS IS THE FINAL, CRITICAL FIX ---
-      # Explicitly tells the HTTP service to listen on all network interfaces,
-      # making it accessible to the 'backend' container.
-      - http.host=0.0.0.0
+      # These two are no longer needed because localhost communication is guaranteed.
+      # - http.host=0.0.0.0 
+      # - "cluster.initial_master_nodes=es01"
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
+      # Expose both ES and the Backend's port on the same container
       - "9200:9200"
-    healthcheck:
-      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 30s
     networks:
-      - corpus-net
-  
+      - corpus-net # This service is the gateway to the network
+
   frontend:
     build:
       context: ./frontend
@@ -66,13 +62,6 @@ services:
       - frontend
     networks:
       - corpus-net
-
-  certbot:
-    image: certbot/certbot
-    container_name: corpus_certbot
-    volumes:
-      - certbot_www:/var/www/certbot
-      - certbot_conf:/etc/letsencrypt
 
 networks:
   corpus-net:
