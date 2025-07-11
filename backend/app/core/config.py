@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     
     # File storage path
     CORPUS_FILES_DIR: str = "/app/corpus_files"
-    
-    # NOTE: In older versions of pydantic_settings, this was inside a 'Config' subclass.
-    # In the latest versions, model_config is the correct way. We use a class variable
-    # to avoid needing a Config subclass.
+
+# --- THIS IS THE CRITICAL FIX ---
+# We must create an instance of the class for other modules to import.
+settings = Settings()
