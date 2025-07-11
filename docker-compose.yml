@@ -19,7 +19,7 @@ services:
     environment:
       - discovery.type=single-node
       # --- THIS IS THE FINAL, CRITICAL FIX ---
-      # Tells Elasticsearch to listen for HTTP traffic on all network interfaces,
+      # Explicitly tells the HTTP service to listen on all network interfaces,
       # making it accessible to the 'backend' container.
       - http.host=0.0.0.0
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
