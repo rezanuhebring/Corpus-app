@@ -2,9 +2,10 @@ server {
     listen 80;
     server_name localhost;
 
-    # --- THIS IS A KEY CHANGE ---
+    # --- REVOLUTIONARY CHANGE ---
     # API requests must now be proxied to the 'elasticsearch' service name,
-    # because that's the container where the backend process is running.
+    # on the backend's port, because that's the container where the 
+    # backend process is now running.
     location /api {
         proxy_pass http://elasticsearch:8000;
         proxy_set_header Host $host;
