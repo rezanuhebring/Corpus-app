@@ -18,6 +18,10 @@ services:
     container_name: corpus_elasticsearch
     environment:
       - discovery.type=single-node
+      # --- THIS IS THE FINAL, CRITICAL FIX ---
+      # Tells Elasticsearch to listen for HTTP traffic on all network interfaces,
+      # making it accessible to the 'backend' container.
+      - http.host=0.0.0.0
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
       - xpack.security.enabled=false
     volumes:
@@ -38,10 +42,6 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: corpus_frontend
-    # --- THIS IS THE FINAL, ROBUST FIX ---
-    # Instead of mounting the whole directory and using the anonymous volume trick,
-    # we explicitly mount only the folders needed for hot-reloading.
-    # This guarantees that the container's own node_modules is used.
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
