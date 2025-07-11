@@ -7,30 +7,38 @@ services:
       - ./backend:/app
       - corpus_files:/app/corpus_files
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    # --- THE ARCHITECTURAL CHANGE ---
-    # This service joins the network namespace of the 'elasticsearch' service.
-    # It will NOT get its own IP on the corpus-net bridge.
-    network_mode: "service:elasticsearch"
     depends_on:
-      - elasticsearch # Still needs ES to exist before joining.
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - corpus-net
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.10.4
     container_name: corpus_elasticsearch
     environment:
-      # We can revert to the simplest, most correct configuration for single-node now.
+      # Use single-node discovery mode
       - discovery.type=single-node
+      # Bind to all network interfaces to be accessible by other containers
+      - http.host=0.0.0.0
+      # Standard memory settings
       - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      # Disable security for development
       - xpack.security.enabled=false
     volumes:
       - esdata:/usr/share/elasticsearch/data
     ports:
-      # Expose both ES and the Backend's port on this container
       - "9200:9200"
+    healthcheck:
+      # This healthcheck ensures the service is actually ready
+      test: "curl -s -f http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=10s || exit 1"
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
     networks:
-      # This service is the gateway for other services like Nginx to find it
       - corpus-net
-
+  
   frontend:
     build:
       context: ./frontend
@@ -56,8 +64,7 @@ services:
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
-      # depends_on still works, as it checks for container existence
-      - backend 
+      - backend
       - frontend
     networks:
       - corpus-net
