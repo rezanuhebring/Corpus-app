@@ -6,7 +6,8 @@ services:
     volumes:
       - ./backend:/app
       - corpus_files:/app/corpus_files
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    # The --reload flag is removed to ensure a clean startup
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     depends_on:
       elasticsearch:
         condition: service_healthy

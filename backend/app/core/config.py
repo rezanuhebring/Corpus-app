@@ -1,14 +1,19 @@
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
+    """
+    This class defines the application's configuration settings.
+    It is configured to ONLY read from system environment variables.
+    """
+    
+    # Required environment variables
     SECRET_KEY: str
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
-    ELASTICSEARCH_HOST: str  # <--- REMOVE THE "localhost" DEFAULT
+    ELASTICSEARCH_HOST: str
+    
+    # Environment variables with default values
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440
     ELASTICSEARCH_PORT: int = 9200
     CORPUS_FILES_DIR: str = "/app/corpus_files"
 
-    class Config:
-        env_file = ".env"
-        env_file_encoding = 'utf-8' # Add encoding for consistency
-
+# Create a single, global settings instance that will be used by the application
 settings = Settings()
