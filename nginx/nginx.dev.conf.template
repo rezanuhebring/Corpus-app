@@ -1,13 +1,14 @@
+# In ./nginx/default.conf
+
 server {
     listen 80;
     server_name localhost;
 
-    # --- REVOLUTIONARY CHANGE ---
-    # API requests must now be proxied to the 'elasticsearch' service name,
-    # on the backend's port, because that's the container where the 
-    # backend process is now running.
+    # --- FINAL FIX ---
+    # API requests are proxied to the 'backend' service, where the 
+    # FastAPI application is running on port 8000.
     location /api {
-        proxy_pass http://elasticsearch:8000;
+        proxy_pass http://backend:8000; # <--- CORRECTED SERVICE NAME
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
