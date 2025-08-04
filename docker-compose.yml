@@ -70,6 +70,15 @@ services:
     networks:
       - corpus-net
 
+  certbot:
+    image: certbot/certbot
+    container_name: corpus_certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
+    networks:
+      - corpus-net
+
 networks:
   corpus-net:
     driver: bridge
