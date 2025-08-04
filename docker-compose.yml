@@ -60,13 +60,22 @@ services:
     build: ./nginx
     container_name: corpus_nginx
     ports:
-      - "8080:80"
+      - "80:80"
       - "443:443"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - backend
       - frontend
+    networks:
+      - corpus-net
+
+  certbot:
+    image: certbot/certbot
+    container_name: corpus_certbot
+    volumes:
+      - certbot_www:/var/www/certbot
+      - certbot_conf:/etc/letsencrypt
     networks:
       - corpus-net
 
