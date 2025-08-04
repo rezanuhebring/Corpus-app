@@ -2,6 +2,8 @@ import json
 import csv
 import io
 from datetime import datetime
+import uuid
+from app.services.file_processor import FileProcessor
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form, Header
 from fastapi.responses import StreamingResponse
 from typing import List
@@ -21,10 +23,52 @@ async def verify_api_key(x_api_key: str = Header(...)):
 async def ingest_document(
     json_payload: str = Form(...),
     original_file: UploadFile = File(...),
+    es_client: AsyncElasticsearch = Depends(get_es_client),
     api_key: str = Depends(verify_api_key)
 ):
-    print(f"Ingesting {original_file.filename}...")
-    return {"status": "received", "filename": original_file.filename}
+    try:
+        payload = json.loads(json_payload)
+        metadata = payload.get('metadata', {})
+        content = payload.get('content', '')
+
+        # Run the file processor
+        processor = FileProcessor(metadata, content, original_file.filename)
+        processed_data = processor.run_all()
+
+        # Update metadata with processed data and original filename
+        metadata.update(processed_data)
+        metadata['filename_original'] = original_file.filename
+
+        # Convert timestamps to datetime objects for storage
+        if 'created_date' in metadata and metadata['created_date']:
+            metadata['created_date'] = datetime.fromtimestamp(metadata['created_date'])
+        if 'modified_date' in metadata and metadata['modified_date']:
+            metadata['modified_date'] = datetime.fromtimestamp(metadata['modified_date'])
+
+        # Prepare the document for Elasticsearch
+        document_body = {
+            "metadata": metadata,
+            "content": content,
+            "ingest_date": datetime.utcnow()
+        }
+
+        # Index the document
+        response = await es_client.index(
+            index="documents",
+            id=str(uuid.uuid4()),
+            document=document_body
+        )
+
+        return {
+            "status": "success",
+            "document_id": response['_id'],
+            "filename_corpus": metadata.get('filename_corpus')
+        }
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON payload.")
+    except Exception as e:
+        print(f"Error during ingestion: {e}")
+        raise HTTPException(status_code=500, detail=f"An error occurred during document ingestion: {str(e)}")
 
 @router.post("/search", response_model=DocumentSearchResult)
 async def search_documents(
