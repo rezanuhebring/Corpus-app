@@ -127,8 +127,11 @@ do
             sed -i "s/YOUR_DOMAIN_NAME/${DOMAIN}/g" nginx/default.conf
 
             echo "Initializing Let's Encrypt certificate..."
+            # Start nginx in the background to handle the challenge
             docker compose up -d nginx
-            docker compose run --rm certbot certonly --webroot --webroot-path /var/www/certbot -d ${DOMAIN} --email ${EMAIL} --rsa-key-size 4096 --agree-tos --non-interactive --force-renewal
+            # Use the certbot service to get the certificate
+            docker compose run --rm certbot certonly --webroot --webroot-path /var/www/certbot -d ${DOMAIN} --email ${EMAIL} --rsa-key-size 4096 --agree-tos --non-interactive
+            # Stop the temporary nginx service
             docker compose down
 
             MODE="prod"
