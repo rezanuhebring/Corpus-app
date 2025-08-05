@@ -1,14 +1,13 @@
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jose import jwt, JWTError
 from app.models.token import TokenData
 from app.models.user import User, UserInDB
-from app.core.security import verify_password
+from app.core.security import verify_password, get_password_hash
 from .config import settings
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/token")
 
-from .security import get_password_hash
 FAKE_USER_DB = {
     "admin@corpus.com": {
         "username": "admin@corpus.com",

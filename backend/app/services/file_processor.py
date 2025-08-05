@@ -2,7 +2,6 @@ import os
 import re
 from datetime import datetime
 from langdetect import detect
-from app.core.config import settings
 
 class FileProcessor:
     def __init__(self, metadata, content, original_filename):
@@ -21,7 +20,7 @@ class FileProcessor:
         try:
             lang = detect(self.content[:500])
             self.processed_data['language'] = lang
-        except:
+        except Exception:
             self.processed_data['language'] = 'unknown'
 
     def _classify_document(self):
