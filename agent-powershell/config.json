@@ -1,5 +1,5 @@
 {
-  "ApiUrl": "http://YOUR_CORPUS_SERVER_IP_OR_DOMAIN:8080/api/v1/documents/ingest",
+  "ApiUrl": "http://localhost:80/api/v1/documents/ingest",
   "ApiKey": "DEV_API_KEY_12345",
   "MonitorDirectory": "C:\\path\\to\\your\\documents",
   "AllowedExtensions": [".txt", ".log", ".docx", ".pdf"]
