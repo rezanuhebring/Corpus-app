@@ -11,10 +11,12 @@ $ConfigPath = Join-Path $ScriptPath "config.json"
 
 # --- LOAD CONFIGURATION FROM JSON ---
 try {
-    $config = Get-Content -Path $ConfigPath | ConvertFrom-Json
+    # Read file with explicit UTF-8 encoding to prevent BOM issues and ensure raw content
+    $fileContent = Get-Content -Path $ConfigPath -Encoding UTF8 -Raw
+    $config = $fileContent | ConvertFrom-Json
 }
 catch {
-    Write-Error "FATAL: config.json not found or is invalid. Please ensure it exists in the same directory as the script: $ConfigPath"
+    Write-Error "FATAL: config.json not found or is invalid. Please ensure it exists in the same directory as the script: $ConfigPath. Error details: $($_.Exception.Message)"
     # Pause to allow user to see the error before the window closes if double-clicked
     Start-Sleep -Seconds 10
     exit 1
