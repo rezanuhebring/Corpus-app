@@ -85,8 +85,10 @@ async def search_documents(
         query_body["bool"]["filter"].append({"term": {"metadata.doc_type.keyword": search_params.doc_type}})
     if search_params.date_from or search_params.date_to:
         date_range = {}
-        if search_params.date_from: date_range["gte"] = search_params.date_from
-        if search_params.date_to: date_range["lt"] = search_params.date_to
+        if search_params.date_from:
+            date_range["gte"] = search_params.date_from
+        if search_params.date_to:
+            date_range["lt"] = search_params.date_to
         query_body["bool"]["filter"].append({"range": {"metadata.modified_date": date_range}})
     try:
         response = await es_client.search(index="documents", query=query_body, size=100)

@@ -1,0 +1,5 @@
+[Corpus]
+api_url = http://localhost:8080/api/v1/documents/ingest
+api_key = DEV_API_KEY_12345
+monitor_directory = /path/to/your/documents
+allowed_extensions = .docx,.pdf,.xlsx,.txt,.eml,.wpd

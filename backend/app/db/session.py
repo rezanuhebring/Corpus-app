@@ -1,4 +1,3 @@
-import time
 import asyncio
 from elasticsearch import AsyncElasticsearch, ConnectionError as ESConnectionError
 from app.core.config import settings
@@ -48,7 +47,7 @@ async def create_indices():
                 # This case is unlikely but handled for completeness.
                 print(f"Ping to Elasticsearch failed. Retrying... (Attempt {attempt + 1}/{max_retries})")
                 await asyncio.sleep(retry_delay)
-        except ESConnectionError as e:
+        except ESConnectionError:
             # This is the expected exception if the service is not ready.
             print(f"Waiting for Elasticsearch... (Attempt {attempt + 1}/{max_retries}).")
             if attempt + 1 == max_retries:

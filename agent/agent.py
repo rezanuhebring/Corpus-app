@@ -31,9 +31,11 @@ class DocumentHandler(FileSystemEventHandler):
         self.allowed_extensions = [ext.strip() for ext in config.get('Corpus', 'allowed_extensions').split(',')]
 
     def on_created(self, event):
-        if not event.is_directory: self.process_file(event.src_path)
+        if not event.is_directory:
+            self.process_file(event.src_path)
     def on_modified(self, event):
-        if not event.is_directory: self.process_file(event.src_path)
+        if not event.is_directory:
+            self.process_file(event.src_path)
 
     def get_client_project_name(self, file_path):
         relative_path = os.path.relpath(file_path, self.monitor_root)
@@ -42,7 +44,8 @@ class DocumentHandler(FileSystemEventHandler):
 
     def process_file(self, file_path):
         filename, extension = os.path.splitext(file_path)
-        if extension.lower() not in self.allowed_extensions: return
+        if extension.lower() not in self.allowed_extensions:
+            return
 
         print(f"Detected change: {file_path}")
         try:
@@ -56,15 +59,19 @@ class DocumentHandler(FileSystemEventHandler):
                 'creator': 'N/A', 'modifier': 'N/A',
             }
             extractor_func = EXTRACTORS.get(extension.lower())
-            if not extractor_func: return
+            if not extractor_func:
+                return
             content = extractor_func(file_path)
             payload = {'metadata': metadata, 'content': content}
             files = {'original_file': (os.path.basename(file_path), open(file_path, 'rb'))}
             headers = {'X-API-Key': self.api_key}
             response = requests.post(self.api_url, headers=headers, data={'json_payload': json.dumps(payload)}, files=files)
-            if response.status_code == 201: print(f"Successfully sent {file_path} to Corpus server.")
-            else: print(f"Error sending file: {response.status_code} - {response.text}")
-        except Exception as e: print(f"An error occurred while processing {file_path}: {e}")
+            if response.status_code == 201:
+                print(f"Successfully sent {file_path} to Corpus server.")
+            else:
+                print(f"Error sending file: {response.status_code} - {response.text}")
+        except Exception as e:
+            print(f"An error occurred while processing {file_path}: {e}")
 
 if __name__ == "__main__":
     print("Starting Corpus Agent...")
@@ -80,7 +87,8 @@ if __name__ == "__main__":
     observer.start()
     print(f"Watching for file changes in: {path_to_watch}")
     try:
-        while True: time.sleep(1)
+        while True:
+            time.sleep(1)
     except KeyboardInterrupt:
         observer.stop()
     observer.join()
